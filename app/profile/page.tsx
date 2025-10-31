@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { AdBanner } from "@/components/ad-banner"
 import { User, Mail, MapPin, Instagram, Trophy, Ticket, ShoppingBag, LogOut, Edit3 } from "lucide-react"
 import { MobileNav } from "@/components/mobile-nav"
 
@@ -25,8 +26,9 @@ export default function Profile() {
   })
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/")
+    // Redirect guest users to registration
+    if (!isLoading && user?.isGuest) {
+      router.push("/register")
     }
   }, [user, isLoading, router])
 
@@ -198,6 +200,9 @@ export default function Profile() {
               <div className="text-center p-4 bg-muted/50 rounded-lg">
                 <ShoppingBag className="h-8 w-8 text-primary mx-auto mb-2" />
                 <p className="text-2xl font-bold text-foreground">{user.totalShirtsPurchased}</p>
+
+        {/* Ad Banner - After Game Stats */}
+        <AdBanner />
                 <p className="text-sm text-muted-foreground">Shirts Bought</p>
               </div>
             </div>

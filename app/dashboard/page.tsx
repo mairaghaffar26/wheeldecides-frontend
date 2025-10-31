@@ -10,6 +10,7 @@ import { SalesEncouragement } from "@/components/sales-encouragement"
 import { CountdownTimer } from "@/components/countdown-timer"
 import { WinnerNotification } from "@/components/winner-notification"
 import { MobileNav } from "@/components/mobile-nav"
+import { AdBanner } from "@/components/ad-banner"
 import { Button } from "@/components/ui/button"
 import { LogOut, Trophy, Users, Ticket } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,11 +25,10 @@ export default function Dashboard() {
   const [winnersHistory, setWinnersHistory] = useState<any[]>([])
   const [gameSettings, setGameSettings] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const isGuest = user?.isGuest || false
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/")
-    }
+    // Guest users are allowed, no redirect needed
   }, [user, isLoading, router])
 
   useEffect(() => {
@@ -37,21 +37,35 @@ export default function Dashboard() {
 
       try {
         setLoading(true)
-        const [dashboard, winnerCheck, latestWinnerData, winnersData, settings] = await Promise.all([
-          apiService.getDashboardData(),
-          apiService.checkWinner(),
-          apiService.getLatestWinner().catch(() => null),
-          apiService.getRecentWinners(10).catch(() => ({ winners: [] })),
-          apiService.getGameSettings().catch(() => null)
-        ])
         
-        setDashboardData(dashboard)
-        setIsWinner(winnerCheck.isWinner)
-        setShowWinnerNotification(winnerCheck.showWinnerNotification)
-        // Extract winner data from the nested response, fallback to dashboard data
-        setLatestWinner(latestWinnerData?.winner || latestWinnerData || dashboard.latestWinner)
-        setWinnersHistory(winnersData.winners || [])
-        setGameSettings(settings)
+        if (isGuest) {
+          // Fetch public data for guests
+          const publicStats = await apiService.getPublicStats()
+          
+          setDashboardData({
+            statistics: publicStats.statistics,
+            latestWinner: publicStats.latestWinner
+          })
+          setLatestWinner(publicStats.latestWinner)
+          setWinnersHistory(publicStats.recentWinners || [])
+          setGameSettings(await apiService.getGameSettings())
+        } else {
+          // Fetch authenticated data for registered users
+          const [dashboard, winnerCheck, latestWinnerData, winnersData, settings] = await Promise.all([
+            apiService.getDashboardData(),
+            apiService.checkWinner(),
+            apiService.getLatestWinner().catch(() => null),
+            apiService.getRecentWinners(10).catch(() => ({ winners: [] })),
+            apiService.getGameSettings().catch(() => null)
+          ])
+          
+          setDashboardData(dashboard)
+          setIsWinner(winnerCheck.isWinner)
+          setShowWinnerNotification(winnerCheck.showWinnerNotification)
+          setLatestWinner(latestWinnerData || dashboard.latestWinner)
+          setWinnersHistory(winnersData.winners || [])
+          setGameSettings(settings)
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
       } finally {
@@ -62,10 +76,13 @@ export default function Dashboard() {
     if (user) {
       fetchDashboardData()
     }
-  }, [user])
+  }, [user, isGuest])
 
   // Polling for live updates every 30 seconds
   useEffect(() => {
+    // Skip polling for guest users
+    if (isGuest) return
+    
     const interval = setInterval(async () => {
       if (!user || loading) return
       
@@ -85,7 +102,7 @@ export default function Dashboard() {
           setShowWinnerNotification(true)
         }
         // Extract winner data from the nested response, fallback to dashboard data
-        setLatestWinner(latestWinnerData?.winner || latestWinnerData || dashboard.latestWinner)
+        setLatestWinner(latestWinnerData || dashboard.latestWinner)
         setWinnersHistory(winnersData.winners || [])
         setGameSettings(settings)
       } catch (error) {
@@ -94,7 +111,7 @@ export default function Dashboard() {
     }, 30000) // 30 seconds
 
     return () => clearInterval(interval)
-  }, [user, loading, showWinnerNotification])
+  }, [user, loading, showWinnerNotification, isGuest])
 
   if (isLoading || loading) {
     return (
@@ -120,15 +137,29 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground">Welcome back, {user.name}!</p>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-2">
+            {isGuest && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.push("/unified-login")} 
+                className="text-foreground border-primary hover:bg-primary/10"
+              >
+                Login
+              </Button>
+            )}
+            {!isGuest && (
+              <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-foreground">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
         {/* Winner Notification Modal */}
-        {showWinnerNotification && latestWinner && (
+        {showWinnerNotification && latestWinner && !isGuest && (
           <WinnerNotification 
             winner={latestWinner}
             onClose={async () => {
@@ -143,20 +174,26 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Welcome Message */}
+        {/* Welcome Message - TOP for guests */}
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold text-foreground">Welcome, {user.name.split(" ")[0]}!</h2>
-          <p className="text-primary font-medium">You're in the game! Good luck!</p>
+          <h2 className="text-2xl font-bold text-foreground">
+            {isGuest ? "Welcome, Guest!" : `Welcome, ${user.name.split(" ")[0]}!`}
+          </h2>
+          <p className="text-primary font-medium">
+            {isGuest ? "Explore the platform and register to join the game!" : "You're in the game! Good luck!"}
+          </p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - RIGHT AFTER welcome for guests */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Total Entries</p>
-                  <p className="text-2xl font-bold text-foreground">{dashboardData?.statistics?.totalEntries || 0}</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {isGuest ? 0 : (dashboardData?.statistics?.totalEntries || 0)}
+                  </p>
                 </div>
                 <Ticket className="h-8 w-8 text-primary" />
               </div>
@@ -168,7 +205,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Shirts Bought</p>
-                  <p className="text-2xl font-bold text-foreground">{user.totalShirtsPurchased}</p>
+                  <p className="text-2xl font-bold text-foreground">{isGuest ? 0 : user.totalShirtsPurchased}</p>
                 </div>
                 <Users className="h-8 w-8 text-primary" />
               </div>
@@ -176,27 +213,87 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* Guest Registration CTA Banner - AFTER stats */}
+        {isGuest && (
+          <Card className="bg-gradient-to-br from-primary/20 via-primary/10 to-background border-primary/50 shadow-lg">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                  <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+                    <Ticket className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-bold text-foreground">🎉 Get Your First Entry FREE!</h3>
+                  <p className="text-muted-foreground">
+                    Register now and receive <span className="text-primary font-bold">1 FREE entry</span> to spin the wheel and win amazing prizes!
+                  </p>
+                </div>
+                <Button
+                  onClick={() => router.push("/register")}
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 pulse-glow font-bold"
+                  size="lg"
+                >
+                  Register & Claim FREE Entry! 🎁
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Join thousands of players. It takes less than 2 minutes!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Ad Banner 1 - After CTA */}
+        <AdBanner />
+
+        {/* Countdown Timer - Show to all users including guests */}
         <CountdownTimer 
           gameSettings={gameSettings}
           loading={loading}
         />
 
-        {/* Info Cards */}
+        {/* Info Cards - Show to all users including guests */}
         <InfoCards 
           gameStats={dashboardData?.statistics}
           gameSettings={gameSettings}
           loading={loading}
         />
 
-        {user.totalEntries < 5 && <SalesEncouragement userSlots={user.totalEntries} totalParticipants={dashboardData?.statistics?.totalUsers || 0} />}
+        {/* Ad Banner 2 - After Info Cards */}
+        <AdBanner />
 
-        {/* Spinning Wheel */}
+        {/* Guest-specific encouragement after seeing game stats */}
+        {isGuest && gameSettings && (
+          <Card className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-500/50">
+            <CardContent className="p-4">
+              <div className="text-center space-y-2">
+                <p className="text-foreground font-semibold">🔥 Active Game! Prize: {gameSettings.currentPrize || '100 usd Gift Voucher'}</p>
+                <p className="text-sm text-muted-foreground">
+                  Register now to join {dashboardData?.statistics?.totalUsers || 'players'} competing for prizes!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!isGuest && user.totalEntries < 5 && (
+          <SalesEncouragement userSlots={user.totalEntries} totalParticipants={dashboardData?.statistics?.totalUsers || 0} />
+        )}
+
+        {/* Ad Banner 3 - Before Wheel */}
+        <AdBanner />
+
+        {/* Spinning Wheel - Show to all users */}
         <div className="text-center space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Live Wheel</h3>
           <SpinningWheel />
         </div>
 
-        {/* Latest Winner */}
+        {/* Ad Banner 4 - After Wheel */}
+        <AdBanner />
+
+        {/* Latest Winner - Show to all users */}
         {latestWinner && !isWinner && (
           <Card className="bg-card border-border">
             <CardHeader>
@@ -236,7 +333,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Winners History */}
+        {/* Winners History - Show to all users */}
         {winnersHistory.length > 0 && (
           <Card className="bg-card border-border">
             <CardHeader>

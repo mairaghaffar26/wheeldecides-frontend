@@ -23,6 +23,7 @@ export interface User {
   avatar?: string;
   createdAt: string;
   congratsShown?: boolean;
+  isGuest?: boolean;
   // Purchase code tracking
   codesUsed?: Array<{
     code: string;
@@ -207,6 +208,17 @@ class ApiService {
     }
     
     throw new Error(response.error || 'Failed to get wheel entries');
+  }
+
+  // Public Wheel Entries (No auth required - for guests)
+  async getPublicWheelEntries(): Promise<WheelStats> {
+    const response = await this.request<WheelStats>('/wheel/public-entries');
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    throw new Error(response.error || 'Failed to get public wheel entries');
   }
 
   async triggerSpin(): Promise<any> {
@@ -428,6 +440,17 @@ class ApiService {
     }
     
     throw new Error(response.error || 'Failed to get game settings');
+  }
+
+  // Public Stats (No auth required - for guests)
+  async getPublicStats(): Promise<any> {
+    const response = await this.request('/wheel/public-stats');
+    
+    if (response.success && response.data) {
+      return response.data;
+    }
+    
+    throw new Error(response.error || 'Failed to get public stats');
   }
 
   async updateGameSettings(settings: any): Promise<any> {

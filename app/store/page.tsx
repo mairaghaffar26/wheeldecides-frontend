@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { AdBanner } from "@/components/ad-banner"
 import { ShoppingCart, ExternalLink, Ticket, Loader2, CheckCircle, AlertCircle, Copy } from "lucide-react"
 import { MobileNav } from "@/components/mobile-nav"
 
@@ -24,8 +25,9 @@ export default function Store() {
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('')
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/")
+    // Redirect guest users to registration
+    if (!isLoading && user?.isGuest) {
+      router.push("/register")
     }
   }, [user, isLoading, router])
 
@@ -164,6 +166,9 @@ export default function Store() {
           </CardContent>
         </Card>
 
+        {/* Ad Banner 1 - After Instructions */}
+        <AdBanner />
+
         {/* Purchase Shirts Button */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -191,6 +196,9 @@ export default function Store() {
         </Card>
 
         <Separator className="my-6" />
+
+        {/* Ad Banner 2 - Before Code Verification */}
+        <AdBanner />
 
         {/* Code Verification */}
         <Card className="bg-card border-border">

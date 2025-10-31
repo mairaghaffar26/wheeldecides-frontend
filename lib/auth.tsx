@@ -5,28 +5,13 @@ import { apiService, type User, type RegisterData } from "./api"
 
 export type UserRole = "user" | "super_admin"
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  instagramHandle: string
-  country: string
-  role: UserRole
-  totalEntries: number
-  totalShirtsPurchased: number
-  isWinner: boolean
-  lastWinDate?: string
-  avatar?: string
-  createdAt: string
-  congratsShown?: boolean
-}
-
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<boolean>
   register: (userData: RegisterData) => Promise<boolean>
   logout: () => void
   isLoading: boolean
+  setGuestMode: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -41,8 +26,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const storedUser = localStorage.getItem("user")
         const token = localStorage.getItem("accessToken")
+        const isGuest = localStorage.getItem("guestMode")
         
-        if (storedUser && token) {
+        if (isGuest === "true") {
+          // Set guest user
+          setUser({
+            id: "guest",
+            name: "Guest",
+            email: "",
+            instagramHandle: "",
+            country: "",
+            role: "user",
+            totalEntries: 0,
+            totalShirtsPurchased: 0,
+            isWinner: false,
+            createdAt: new Date().toISOString(),
+            isGuest: true
+          })
+        } else if (storedUser && token) {
           // Verify token is still valid by fetching current user
           const currentUser = await apiService.getCurrentUser()
           setUser(currentUser)
@@ -59,11 +60,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
+  const setGuestMode = () => {
+    localStorage.setItem("guestMode", "true")
+    setUser({
+      id: "guest",
+      name: "Guest",
+      email: "",
+      instagramHandle: "",
+      country: "",
+      role: "user",
+      totalEntries: 0,
+      totalShirtsPurchased: 0,
+      isWinner: false,
+      createdAt: new Date().toISOString(),
+      isGuest: true
+    })
+  }
+
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
 
     try {
       const response = await apiService.login(email, password)
+      // Clear guest mode on successful login
+      localStorage.removeItem("guestMode")
       setUser(response.user)
       setIsLoading(false)
       return true
@@ -79,6 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const response = await apiService.register(userData)
+      // Clear guest mode on successful registration
+      localStorage.removeItem("guestMode")
       setUser(response.user)
       setIsLoading(false)
       return true
@@ -91,10 +113,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     apiService.logout()
+    localStorage.removeItem("guestMode")
     setUser(null)
   }
 
-  return <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, login, register, logout, isLoading, setGuestMode }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

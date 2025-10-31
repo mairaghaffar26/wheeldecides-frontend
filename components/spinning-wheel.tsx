@@ -17,11 +17,15 @@ export function SpinningWheel() {
   const [wheelEntries, setWheelEntries] = useState<WheelEntry[]>([])
   const [totalEntries, setTotalEntries] = useState(0)
   const [loading, setLoading] = useState(true)
+  const isGuest = user?.isGuest || false
 
   useEffect(() => {
     const fetchWheelEntries = async () => {
       try {
-        const data = await apiService.getWheelEntries()
+        // Use public endpoint for guests, authenticated endpoint for users
+        const data = isGuest 
+          ? await apiService.getPublicWheelEntries()
+          : await apiService.getWheelEntries()
         setWheelEntries(data.entries || [])
         setTotalEntries(data.totalEntries || 0)
       } catch (error) {
@@ -36,7 +40,7 @@ export function SpinningWheel() {
     // Poll for updates every 30 seconds
     const interval = setInterval(fetchWheelEntries, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [isGuest])
 
   // Create wheel segments based on participants and their entries
   const createWheelSegments = () => {
