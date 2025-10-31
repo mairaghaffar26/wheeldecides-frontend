@@ -10,7 +10,7 @@ import { SalesEncouragement } from "@/components/sales-encouragement"
 import { CountdownTimer } from "@/components/countdown-timer"
 import { WinnerNotification } from "@/components/winner-notification"
 import { MobileNav } from "@/components/mobile-nav"
-import { AdBanner } from "@/components/ad-banner"
+
 import { Button } from "@/components/ui/button"
 import { LogOut, Trophy, Users, Ticket } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -244,8 +244,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Ad Banner 1 - After CTA */}
-        <AdBanner />
+
 
         {/* Countdown Timer - Show to all users including guests */}
         <CountdownTimer 
@@ -260,8 +259,7 @@ export default function Dashboard() {
           loading={loading}
         />
 
-        {/* Ad Banner 2 - After Info Cards */}
-        <AdBanner />
+
 
         {/* Guest-specific encouragement after seeing game stats */}
         {isGuest && gameSettings && (
@@ -281,8 +279,7 @@ export default function Dashboard() {
           <SalesEncouragement userSlots={user.totalEntries} totalParticipants={dashboardData?.statistics?.totalUsers || 0} />
         )}
 
-        {/* Ad Banner 3 - Before Wheel */}
-        <AdBanner />
+
 
         {/* Spinning Wheel - Show to all users */}
         <div className="text-center space-y-4">
@@ -290,8 +287,7 @@ export default function Dashboard() {
           <SpinningWheel />
         </div>
 
-        {/* Ad Banner 4 - After Wheel */}
-        <AdBanner />
+
 
         {/* Latest Winner - Show to all users */}
         {latestWinner && !isWinner && (
