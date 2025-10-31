@@ -34,11 +34,17 @@ export default function RootLayout({
           src="https://pl27963606.effectivegatecpm.com/64/e8/48/64e848b354cdefa1bc4b4c43b3de20f3.js"
         />
         
-        {/* Social Bar Ads - Adsterra */}
+        {/* Social Bar Ads - Adsterra - Delayed 3 seconds */}
         <Script
           id="adsterra-social"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           src="https://pl27963610.effectivegatecpm.com/82/d3/8c/82d38c318f35346ac68a9dc7e4e71974.js"
+          onLoad={() => {
+            // Additional 3-second delay after script loads
+            setTimeout(() => {
+              console.log('Social bar ad loaded after delay')
+            }, 3000)
+          }}
         />
       </body>
     </html>
